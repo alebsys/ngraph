@@ -1,3 +1,5 @@
+github.com/alebsys/procfs v0.12.9 h1:MKe0E6K5NRI93YBvDutOLbOyXrMp/Bxe8yP0/gb5CgY=
+github.com/alebsys/procfs v0.12.9/go.mod h1:R0NIhLq068ZHLXhloD4KFpQbM5AYvHUy/X6Zb0mv6v4=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 golang.org/x/sys v0.15.0 h1:h48lPFYpsTvQJZF4EKyI4aLHaev3CxivZmv7yZig9pc=
 golang.org/x/sys v0.15.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
