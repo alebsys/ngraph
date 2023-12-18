@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"fmt"
 	"log"
 	"time"
 )
@@ -42,9 +41,7 @@ func (c *Collector) Run() {
 			log.Println(err)
 			continue
 		}
-		// File to store metrics, extension *.prom required for node_exporter textfile-collector https://github.com/prometheus/node_exporter#textfile-collector
-		outputFile := fmt.Sprintf("%s/ngraph.prom", c.cfg.MetricsFilePath)
-		if err := c.writeToFile(outputFile, connections); err != nil {
+		if err := c.writeToFile(c.cfg.MetricsFilePath, connections); err != nil {
 			log.Println(err)
 			continue
 		}

@@ -4,6 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
+)
+
+const (
+	fileName = "ngraph.prom"
 )
 
 type FileWriter struct {
@@ -11,8 +16,12 @@ type FileWriter struct {
 	Writer     *bufio.Writer
 }
 
-func NewFileWriter(file string) (*FileWriter, error) {
-	output, err := os.Create(file)
+func NewFileWriter(path string) (*FileWriter, error) {
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	output, err := os.Create(filepath.Join(path, fileName))
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +55,8 @@ func (fw *FileWriter) Close() error {
 // writeToFile writes network connection metrics to a file specified by the given path.
 // It takes a map of connection groups and their counts, and formats and writes Prometheus metrics to the specified file.
 // The function returns an error if there is an issue creating or writing to the file.
-func (c *Collector) writeToFile(file string, connections map[string]int) error {
-	writer, err := NewFileWriter(file)
+func (c *Collector) writeToFile(path string, connections map[string]int) error {
+	writer, err := NewFileWriter(path)
 	if err != nil {
 		return err
 	}
