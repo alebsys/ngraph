@@ -55,8 +55,7 @@ network_connections_output_total{src_ip="10.12.57.104", dest_ip="10.24.127.27", 
 
 Example of possible visualization of metrics in grafana:
 
-<!-- ![Example of possible visualization of metrics in grafana](./examples/grafana-example.png) -->
-![Example of possible visualization of metrics in grafana](./examples/grafana-example1.png)
+<img src="examples/grafana-example.png" width="200" class="center">
 
 ## Contributing
 
