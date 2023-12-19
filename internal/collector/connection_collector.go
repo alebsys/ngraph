@@ -30,7 +30,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 	}
 
 	// TODO: добавить описание к функции и в целом зачем нужен ip адрес хоста
-	hostIP, err := utils.GetMainHostIpAddress()
+	localIP, err := utils.GetLocalIP()
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 		}
 		networkNamespacePIDs[netNsID] = process.PID
 
-		if err := c.getConnectionsFromNamespace(minPort, maxPort, &connections, process, hostIP); err != nil {
+		if err := c.getConnectionsFromNamespace(minPort, maxPort, &connections, process, localIP); err != nil {
 			return nil, err
 		}
 
@@ -80,7 +80,7 @@ func (c *Collector) getNetworkNamespaceID(process procfs.Proc) (uint32, error) {
 
 // getConnectionsFromNamespace retrieves and counts established connections from a network namespace.
 // It filters connections based on the established status and the specified port range.
-func (c *Collector) getConnectionsFromNamespace(minPort, maxPort int, connections *map[string]int, process procfs.Proc, hostIP string) error {
+func (c *Collector) getConnectionsFromNamespace(minPort, maxPort int, connections *map[string]int, process procfs.Proc, localIP string) error {
 	// Get all connections from /proc/<pid>/net/tcp (per network namespace)
 	conns, err := process.NetTCP()
 	if err != nil {
@@ -94,7 +94,7 @@ func (c *Collector) getConnectionsFromNamespace(minPort, maxPort int, connection
 		}
 		connectDirection := checkConnectDirection(int(tcpConns.LocalPort), minPort, maxPort)
 
-		key := fmt.Sprintf("%s-%s-%s", hostIP, tcpConns.RemAddr, connectDirection)
+		key := fmt.Sprintf("%s-%s-%s", localIP, tcpConns.RemAddr, connectDirection)
 		(*connections)[key]++
 	}
 	return nil
