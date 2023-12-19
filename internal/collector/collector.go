@@ -38,12 +38,12 @@ func (c *Collector) Run() {
 	for {
 		connections, err := c.getConnections()
 		if err != nil {
-			log.Println(err)
+			log.Printf("Error getting connections: %v", err)
 			time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
 			continue
 		}
 		if err := c.writeToFile(c.cfg.MetricsFilePath, connections); err != nil {
-			log.Println(err)
+			log.Printf("Error writing to file: %v", err)
 		}
 		time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
 	}
