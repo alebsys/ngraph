@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/alebsys/ngraph/internal/utils"
+	lnet "github.com/alebsys/ngraph/internal/localnetinfo"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 
 func createMetric(k string, v int) (string, error) {
 	connMeta := strings.Split(k, "-")
-	peerHostName, err := utils.ResolveAddr(connMeta[1])
+	peerHostName, err := lnet.ResolveAddr(connMeta[1])
 	if err != nil {
 		log.Printf("error: the address %s was not resolved", connMeta[1])
 	}

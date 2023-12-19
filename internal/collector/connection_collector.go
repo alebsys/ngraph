@@ -3,7 +3,7 @@ package collector
 import (
 	"fmt"
 
-	"github.com/alebsys/ngraph/internal/utils"
+	lnet "github.com/alebsys/ngraph/internal/localnetinfo"
 	"github.com/prometheus/procfs"
 )
 
@@ -24,13 +24,13 @@ func (c *Collector) getConnections() (map[string]int, error) {
 		return nil, err
 	}
 
-	minPort, maxPort, err := utils.GetPortRange(IpLocalPortRangeFile)
+	minPort, maxPort, err := lnet.GetPortRange(IpLocalPortRangeFile)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: добавить описание к функции и в целом зачем нужен ip адрес хоста
-	localIP, err := utils.GetLocalIP()
+	localIP, err := lnet.GetLocalIP()
 	if err != nil {
 		return nil, err
 	}
