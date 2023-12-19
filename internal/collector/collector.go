@@ -39,11 +39,11 @@ func (c *Collector) Run() {
 		connections, err := c.getConnections()
 		if err != nil {
 			log.Println(err)
+			time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
 			continue
 		}
 		if err := c.writeToFile(c.cfg.MetricsFilePath, connections); err != nil {
 			log.Println(err)
-			continue
 		}
 		time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
 	}
