@@ -42,7 +42,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 	for _, process := range processes {
 		netNsID, err := c.getNetworkNamespaceID(process)
 		if err != nil {
-			return nil, err
+			continue
 		}
 
 		// Skip if the network namespace is already processed
@@ -52,7 +52,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 		networkNamespacePIDs[netNsID] = process.PID
 
 		if err := c.getConnectionsFromNamespace(minPort, maxPort, &connections, process, localIP); err != nil {
-			return nil, err
+			continue
 		}
 
 		// If ConnectFromAllNs == false (config) get connections only from root namespace (PID 1)
