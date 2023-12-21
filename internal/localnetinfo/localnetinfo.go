@@ -14,7 +14,13 @@ func ResolveAddr(addr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return hostnames[0], nil
+	hostname := hostnames[0]
+
+	// return hostname without last dot symbol
+	if len(hostname) > 0 {
+		hostname = hostname[:len(hostnames)-1]
+	}
+	return hostname, nil
 }
 
 func GetPortRange(file string) (int, int, error) {
