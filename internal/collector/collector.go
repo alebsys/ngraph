@@ -46,12 +46,21 @@ func NewConfig(interval int, output string, exclude string, all bool) *Config {
 
 // Run starts the metric collection process for the Collector.
 func (c *Collector) Run() {
-	namespaceInfo := "only from host network namespace"
+	namespaceInfo := "restrict scraping to connections within the host's network namespace"
 	if c.cfg.ConnectFromAllNs {
-		namespaceInfo = "from all network namespaces"
+		namespaceInfo = "gather connections across all network namespaces"
 	}
 
-	log.Printf("Options:\n* interval for generating metrics: %d\n* path for metric files: %s\n* scrape connections %s\n* exclude address patterns: %v\n", c.cfg.ScrapeInterval, c.cfg.MetricsFilePath, namespaceInfo, c.cfg.ExcludeSubnets)
+	optionsFormat := "Options:\n" +
+		"* metric generation interval: %d\n" +
+		"* metric file path: %s\n" +
+		"* %s\n" +
+		"* exclude patterns for IP addresses: %v\n"
+	log.Printf(optionsFormat,
+		c.cfg.ScrapeInterval,
+		c.cfg.MetricsFilePath,
+		namespaceInfo,
+		strings.Join(c.cfg.ExcludeSubnets, ", "))
 
 	for {
 		connections, err := c.getConnections()
