@@ -50,7 +50,8 @@ func (c *Collector) Run() {
 	if c.cfg.ConnectFromAllNs {
 		namespaceInfo = "from all network namespaces"
 	}
-	log.Printf("Options:\n* interval for generating metrics: %d\n* path for metric files: %s\n* scrape connections %s\n", c.cfg.ScrapeInterval, c.cfg.MetricsFilePath, namespaceInfo)
+
+	log.Printf("Options:\n* interval for generating metrics: %d\n* path for metric files: %s\n* scrape connections %s\n* exclude address patterns: %v\n", c.cfg.ScrapeInterval, c.cfg.MetricsFilePath, namespaceInfo, c.cfg.ExcludeSubnets)
 
 	for {
 		connections, err := c.getConnections()
