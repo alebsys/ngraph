@@ -1,7 +1,6 @@
 package localnetinfo
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -42,21 +41,4 @@ func GetPortRange(file string) (int, int, error) {
 	}
 
 	return min, max, nil
-}
-
-// GetLocalIP returns the non loopback local IP of the host
-func GetLocalIP() (string, error) {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return "", fmt.Errorf("failed to get local IP: %v", err)
-	}
-	for _, a := range addrs {
-		// check the address type and if it is not a loopback the display it
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String(), nil
-			}
-		}
-	}
-	return "", fmt.Errorf("local IP not found")
 }
