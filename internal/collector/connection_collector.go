@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fmt"
+	"strings"
 
 	lnet "github.com/alebsys/ngraph/internal/localnetinfo"
 	"github.com/prometheus/procfs"
@@ -81,17 +82,34 @@ func (c *Collector) getConnectionsFromNamespace(minPort, maxPort int, connection
 		return err
 	}
 
-	for _, tcpConns := range conns.NetTCP {
+	for _, conn := range conns.NetTCP {
 		// Check if the connection is established (St == 1)
-		if tcpConns.St != 1 {
+		if conn.St != 1 {
 			continue
 		}
-		connectDirection := checkConnectDirection(int(tcpConns.LocalPort), minPort, maxPort)
+		// Check if the connection addresses are within the exclude subnets to ignore it
+		if shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.LocalAddr.String()) || shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.RemAddr.String()) {
+			continue
+		}
+		connDirection := checkConnectDirection(int(conn.LocalPort), minPort, maxPort)
 
-		key := fmt.Sprintf("%s-%s-%s", tcpConns.LocalAddr, tcpConns.RemAddr, connectDirection)
+		key := fmt.Sprintf("%s-%s-%s", conn.LocalAddr, conn.RemAddr, connDirection)
 		(*connections)[key]++
 	}
 	return nil
+}
+
+func shouldMatchBySubnets(subnets []string, addr string) bool {
+	for _, s := range subnets {
+		// // handle cases: --exclude ("10.32.68,") || (",10.32.68,")
+		if len(s) == 0 {
+			continue
+		}
+		if strings.HasPrefix(addr, s) {
+			return true
+		}
+	}
+	return false
 }
 
 // checkConnectDirection determines the direction of a network connection based on the specified port range.

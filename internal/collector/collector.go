@@ -2,6 +2,7 @@ package collector
 
 import (
 	"log"
+	"strings"
 	"time"
 )
 
@@ -18,12 +19,28 @@ type Config struct {
 	ScrapeInterval   int
 	MetricsFilePath  string
 	ConnectFromAllNs bool
+	ExcludeSubnets   []string
 }
 
 // NewCollector creates a new Collector instance with the given configuration.
 func NewCollector(c *Config) *Collector {
 	return &Collector{
 		cfg: *c,
+	}
+}
+
+// NewConfig creates a new Config instance with the given fields.
+func NewConfig(interval int, output string, exclude string, all bool) *Config {
+	excludeSubnets := strings.Split(exclude, ",")
+
+	if len(excludeSubnets) == 1 && excludeSubnets[0] == "" {
+		excludeSubnets[0] = "none"
+	}
+	return &Config{
+		ScrapeInterval:   interval,
+		MetricsFilePath:  output,
+		ConnectFromAllNs: all,
+		ExcludeSubnets:   excludeSubnets,
 	}
 }
 

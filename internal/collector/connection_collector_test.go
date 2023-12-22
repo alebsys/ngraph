@@ -44,3 +44,57 @@ func Test_checkConnectDirection(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldMatchBySubnets(t *testing.T) {
+	tests := []struct {
+		name    string
+		subnets []string
+		addr    string
+		want    bool
+	}{
+		{
+			name:    "Matching subnet, should return true",
+			subnets: []string{"none", "10.32.68"},
+			addr:    "10.32.68.1",
+			want:    true,
+		},
+		{
+			name:    "Non-matching subnet, should return false",
+			subnets: []string{"10.32.68"},
+			addr:    "192.168.1.1",
+			want:    false,
+		},
+		{
+			name:    "TODO",
+			subnets: []string{"", "10.32.68"},
+			addr:    "192.168.1.1",
+			want:    false,
+		},
+		{
+			name:    "TODO",
+			subnets: []string{" ", "nOne", "10.32"},
+			addr:    "10.32.68.10",
+			want:    true,
+		},
+		{
+			name:    "TODO",
+			subnets: []string{""},
+			addr:    "10.32.68.10",
+			want:    false,
+		},
+		{
+			name:    "TODO",
+			subnets: []string{" "},
+			addr:    "10.32.68.10",
+			want:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldMatchBySubnets(tt.subnets, tt.addr)
+			if got != tt.want {
+				t.Errorf("\nExpected '%v', got '%v' (subnets: %v, address %s)", tt.want, got, tt.subnets, tt.addr)
+			}
+		})
+	}
+}
