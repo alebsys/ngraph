@@ -1,0 +1,14 @@
+[Unit]
+Description=Ngraph - Network Connections Data Collector (https://github.com/alebsys/ngraph)
+After=network.target
+Wants=network.target
+
+[Service]
+ExecStart=ngraph \
+--interval 15 \
+--output /tmp/ngraph \
+--all \
+--exclude "127.0"
+
+[Install]
+WantedBy=multi-user.target
