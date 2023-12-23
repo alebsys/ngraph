@@ -25,7 +25,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 		return nil, err
 	}
 
-	minPort, maxPort, err := lnet.GetPortRange(IpLocalPortRangeFile)
+	portRanges, err := lnet.GetPortRange(IpLocalPortRangeFile)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 
 	for _, process := range processes {
 		netNsID, err := c.getNetworkNamespaceID(process)
-		if err != nil {
+		if err != nil || netNsID == 0 {
 			continue
 		}
 
@@ -46,7 +46,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 		}
 		networkNamespacePIDs[netNsID] = process.PID
 
-		if err := c.getConnectionsFromNamespace(minPort, maxPort, &connections, process); err != nil {
+		if err := c.getConnectionsFromNamespace(portRanges, &connections, process); err != nil {
 			continue
 		}
 
@@ -64,18 +64,23 @@ func (c *Collector) getNetworkNamespaceID(process procfs.Proc) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+	return selectNetworkNamespaceInode(namespaces), nil
+}
+
+// selectNetworkNamespaceInode selects the inode of the network namespace from the list of namespaces.
+func selectNetworkNamespaceInode(namespaces procfs.Namespaces) uint32 {
 	for _, namespace := range namespaces {
 		// we are only interested in the inode of the network namespace
 		if namespace.Type == "net" {
-			return namespace.Inode, nil
+			return namespace.Inode
 		}
 	}
-	return 0, nil
+	return 0
 }
 
 // getConnectionsFromNamespace retrieves and counts established connections from a network namespace.
 // It filters connections based on the established status and the specified port range.
-func (c *Collector) getConnectionsFromNamespace(minPort, maxPort int, connections *map[string]int, process procfs.Proc) error {
+func (c *Collector) getConnectionsFromNamespace(portRanges lnet.LocalPortRange, connections *map[string]int, process procfs.Proc) error {
 	// Get all connections from /proc/<pid>/net/tcp (per network namespace)
 	conns, err := process.NetTCP()
 	if err != nil {
@@ -91,7 +96,7 @@ func (c *Collector) getConnectionsFromNamespace(minPort, maxPort int, connection
 		if shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.LocalAddr.String()) || shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.RemAddr.String()) {
 			continue
 		}
-		connDirection := checkConnectDirection(int(conn.LocalPort), minPort, maxPort)
+		connDirection := checkConnectDirection(int(conn.LocalPort), portRanges.MinPort, portRanges.MaxPort)
 
 		key := fmt.Sprintf("%s-%s-%s", conn.LocalAddr, conn.RemAddr, connDirection)
 		(*connections)[key]++

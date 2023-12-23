@@ -6,23 +6,31 @@ import (
 	"strings"
 )
 
-func GetPortRange(file string) (int, int, error) {
+type LocalPortRange struct {
+	MinPort int
+	MaxPort int
+}
+
+func GetPortRange(file string) (LocalPortRange, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return 0, 0, err
+		return LocalPortRange{}, err
 	}
 
 	ports := strings.Fields(string(data))
 
 	min, err := strconv.Atoi(ports[0])
 	if err != nil {
-		return 0, 0, err
+		return LocalPortRange{}, err
 	}
 
 	max, err := strconv.Atoi(ports[1])
 	if err != nil {
-		return 0, 0, err
+		return LocalPortRange{}, err
 	}
 
-	return min, max, nil
+	return LocalPortRange{
+		MinPort: min,
+		MaxPort: max,
+	}, nil
 }
