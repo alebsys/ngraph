@@ -3,9 +3,12 @@ package collector
 import (
 	"fmt"
 	"strings"
+	"syscall"
 
 	lnet "github.com/alebsys/ngraph/internal/localnetinfo"
 	"github.com/prometheus/procfs"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 const (
@@ -31,22 +34,23 @@ func (c *Collector) getConnections() (map[string]int, error) {
 	}
 
 	// key - inode network namespace, value - PID owner
-	networkNamespacePIDs := make(map[uint32]int)
+	networkNamespacePIDs := make(map[string]int)
+	// networkNamespacePIDs := make(map[uint32]int)
 	connections := make(map[string]int)
 
 	for _, process := range processes {
-		netNsID, err := c.getNetworkNamespaceID(process)
-		if err != nil || netNsID == 0 {
+		ns, err := netns.GetFromPid(process.PID)
+		if err != nil {
 			continue
 		}
 
 		// Skip if the network namespace is already processed
-		if _, ok := networkNamespacePIDs[netNsID]; ok {
+		if _, ok := networkNamespacePIDs[ns.UniqueId()]; ok {
 			continue
 		}
-		networkNamespacePIDs[netNsID] = process.PID
+		networkNamespacePIDs[ns.UniqueId()] = process.PID
 
-		if err := c.getConnectionsFromNamespace(portRanges, &connections, process); err != nil {
+		if err := c.getEstabConnectionsFromNetNs(portRanges, &connections, ns); err != nil {
 			continue
 		}
 
@@ -78,27 +82,34 @@ func selectNetworkNamespaceInode(namespaces procfs.Namespaces) uint32 {
 	return 0
 }
 
-// getConnectionsFromNamespace retrieves and counts established connections from a network namespace.
-// It filters connections based on the established status and the specified port range.
-func (c *Collector) getConnectionsFromNamespace(portRanges lnet.LocalPortRange, connections *map[string]int, process procfs.Proc) error {
-	// Get all connections from /proc/<pid>/net/tcp (per network namespace)
-	conns, err := process.NetTCP()
+func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange, connections *map[string]int, ns netns.NsHandle) error {
+	err := netns.Setns(ns, syscall.CLONE_NEWNET)
 	if err != nil {
 		return err
 	}
 
-	for _, conn := range conns.NetTCP {
-		// Check if the connection is established (St == 1)
-		if conn.St != 1 {
-			continue
-		}
-		// Check if the connection addresses are within the exclude subnets to ignore it
-		if shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.LocalAddr.String()) || shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.RemAddr.String()) {
-			continue
-		}
-		connDirection := checkConnectDirection(int(conn.LocalPort), portRanges.MinPort, portRanges.MaxPort)
+	conns, err := netlink.SocketDiagTCPInfo(syscall.AF_INET)
+	if err != nil {
+		return err
+	}
 
-		key := fmt.Sprintf("%s-%s-%s", conn.LocalAddr, conn.RemAddr, connDirection)
+	for _, conn := range conns {
+		// Check if the connection is established (St == 1)
+		if conn.InetDiagMsg.State != 1 {
+			continue
+		}
+		if conn.TCPInfo == nil {
+			continue
+		}
+
+		// Check if the connection addresses are within the exclude subnets to ignore it
+		if shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.InetDiagMsg.ID.Source.String()) || shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.InetDiagMsg.ID.Destination.String()) {
+			continue
+		}
+
+		direction := checkConnectDirection(int(conn.InetDiagMsg.ID.SourcePort), portRanges.MinPort, portRanges.MaxPort)
+
+		key := fmt.Sprintf("%s-%s-%s", conn.InetDiagMsg.ID.Source, conn.InetDiagMsg.ID.Destination, direction)
 		(*connections)[key]++
 	}
 	return nil
@@ -106,7 +117,7 @@ func (c *Collector) getConnectionsFromNamespace(portRanges lnet.LocalPortRange, 
 
 func shouldMatchBySubnets(subnets []string, addr string) bool {
 	for _, s := range subnets {
-		// // handle cases: --exclude ("10.32.68,") || (",10.32.68,")
+		// handle cases: --exclude ("10.32.68,") || (",10.32.68,")
 		if len(s) == 0 {
 			continue
 		}
