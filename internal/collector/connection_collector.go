@@ -88,10 +88,20 @@ func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange,
 		return err
 	}
 
-	conns, err := netlink.SocketDiagTCPInfo(syscall.AF_INET)
+	var conns []*netlink.InetDiagTCPInfoResp
+
+	ipv4Conns, err := netlink.SocketDiagTCPInfo(syscall.AF_INET)
 	if err != nil {
 		return err
 	}
+
+	ipv6Conns, err := netlink.SocketDiagTCPInfo(syscall.AF_INET6)
+	if err != nil {
+		return err
+	}
+
+	conns = append(conns, ipv4Conns...)
+	conns = append(conns, ipv6Conns...)
 
 	for _, conn := range conns {
 		// Check if the connection is established (St == 1)
