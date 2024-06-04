@@ -3,7 +3,6 @@ package collector
 import (
 	"log"
 	"strings"
-	"time"
 )
 
 const (
@@ -62,16 +61,16 @@ func (c *Collector) Run() {
 		namespaceInfo,
 		strings.Join(c.cfg.ExcludeSubnets, ", "))
 
-	for {
-		connections, err := c.getConnections()
-		if err != nil {
-			log.Printf("Error getting connections: %v", err)
-			time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
-			continue
-		}
-		if err := c.writeToFile(c.cfg.MetricsFilePath, connections); err != nil {
-			log.Printf("Error writing to file: %v", err)
-		}
-		time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
+	// for {
+	connections, err := c.getConnections()
+	if err != nil {
+		log.Printf("Error getting connections: %v", err)
+		// time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
+		// continue
+	}
+	if err := c.writeToFile(c.cfg.MetricsFilePath, connections); err != nil {
+		log.Printf("Error writing to file: %v", err)
+		// }
+		// time.Sleep(time.Duration(c.cfg.ScrapeInterval) * time.Second)
 	}
 }
