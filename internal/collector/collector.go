@@ -12,7 +12,6 @@ import (
 
 const (
 	IpLocalPortRangeFile = "/proc/sys/net/ipv4/ip_local_port_range"
-	procRoot             = "/proc"
 )
 
 type Collector struct {
@@ -52,13 +51,7 @@ func NewConfig(exclude string, allNS bool) *Config {
 
 // GetConnections() TODO:
 func (c *Collector) GetConnections() (map[UniqTupleConnection]float64, error) {
-	fs, err := procfs.NewFS(procRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	// get all processes
-	processes, err := fs.AllProcs()
+	procs, err := procfs.AllProcs()
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +61,6 @@ func (c *Collector) GetConnections() (map[UniqTupleConnection]float64, error) {
 		return nil, err
 	}
 
-	// TODO: добавить описание к функции и в целом зачем нужен ip адрес хоста
 	localIP, err := lnet.GetLocalIP()
 	if err != nil {
 		return nil, err
@@ -78,29 +70,25 @@ func (c *Collector) GetConnections() (map[UniqTupleConnection]float64, error) {
 	networkNamespacePIDs := make(map[string]int)
 	connections := make(map[UniqTupleConnection]float64)
 
-	for _, process := range processes {
-		ns, err := netns.GetFromPid(process.PID)
+	for _, proc := range procs {
+		ns, err := netns.GetFromPid(proc.PID)
 		if err != nil {
 			continue
 		}
+		defer ns.Close()
 
 		// Skip if the network namespace is already processed
 		if _, ok := networkNamespacePIDs[ns.UniqueId()]; ok {
 			continue
 		}
-		networkNamespacePIDs[ns.UniqueId()] = process.PID
+		networkNamespacePIDs[ns.UniqueId()] = proc.PID
 
 		if err := c.getEstabConnectionsFromNetNs(portRanges, &connections, ns, localIP); err != nil {
 			continue
 		}
 
-		err = ns.Close()
-		if err != nil {
-			continue
-		}
-
-		// If ConnectFromAllNs == false (config) get connections only from root namespace (PID 1)
-		if process.PID == 1 && !c.cfg.ConnectFromAllNs {
+		// If ConnectFromAllNs == false (from config) then get connections only from root namespace (PID 1)
+		if proc.PID == 1 && !c.cfg.ConnectFromAllNs {
 			break
 		}
 	}
