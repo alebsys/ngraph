@@ -33,6 +33,12 @@ func (c *Collector) getConnections() (map[string]int, error) {
 		return nil, err
 	}
 
+	// TODO: добавить описание к функции и в целом зачем нужен ip адрес хоста
+	localIP, err := lnet.GetLocalIP()
+	if err != nil {
+		return nil, err
+	}
+
 	// key - inode network namespace, value - PID owner
 	networkNamespacePIDs := make(map[string]int)
 	// networkNamespacePIDs := make(map[uint32]int)
@@ -50,7 +56,7 @@ func (c *Collector) getConnections() (map[string]int, error) {
 		}
 		networkNamespacePIDs[ns.UniqueId()] = process.PID
 
-		if err := c.getEstabConnectionsFromNetNs(portRanges, &connections, ns); err != nil {
+		if err := c.getEstabConnectionsFromNetNs(portRanges, &connections, ns, localIP); err != nil {
 			continue
 		}
 
@@ -82,7 +88,7 @@ func selectNetworkNamespaceInode(namespaces procfs.Namespaces) uint32 {
 	return 0
 }
 
-func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange, connections *map[string]int, ns netns.NsHandle) error {
+func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange, connections *map[string]int, ns netns.NsHandle, localIP string) error {
 	err := netns.Setns(ns, syscall.CLONE_NEWNET)
 	if err != nil {
 		return err
@@ -119,7 +125,7 @@ func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange,
 
 		direction := checkConnectDirection(int(conn.InetDiagMsg.ID.SourcePort), portRanges.MinPort, portRanges.MaxPort)
 
-		key := fmt.Sprintf("%s-%s-%s", conn.InetDiagMsg.ID.Source, conn.InetDiagMsg.ID.Destination, direction)
+		key := fmt.Sprintf("%s-%s-%s", localIP, conn.InetDiagMsg.ID.Destination, direction)
 		(*connections)[key]++
 	}
 	return nil
