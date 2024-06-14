@@ -68,6 +68,12 @@ func (c *Collector) GetConnections() (map[UniqTupleConnection]float64, error) {
 		return nil, err
 	}
 
+	// TODO: добавить описание к функции и в целом зачем нужен ip адрес хоста
+	localIP, err := lnet.GetLocalIP()
+	if err != nil {
+		return nil, err
+	}
+
 	// key - inode network namespace, value - PID owner
 	networkNamespacePIDs := make(map[string]int)
 	connections := make(map[UniqTupleConnection]float64)
@@ -84,7 +90,7 @@ func (c *Collector) GetConnections() (map[UniqTupleConnection]float64, error) {
 		}
 		networkNamespacePIDs[ns.UniqueId()] = process.PID
 
-		if err := c.getEstabConnectionsFromNetNs(portRanges, &connections, ns); err != nil {
+		if err := c.getEstabConnectionsFromNetNs(portRanges, &connections, ns, localIP); err != nil {
 			continue
 		}
 
@@ -102,7 +108,7 @@ func (c *Collector) GetConnections() (map[UniqTupleConnection]float64, error) {
 }
 
 // getEstabConnectionsFromNetNs TODO:
-func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange, connections *map[UniqTupleConnection]float64, ns netns.NsHandle) error {
+func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange, connections *map[UniqTupleConnection]float64, ns netns.NsHandle, localIP string) error {
 	err := netns.Setns(ns, syscall.CLONE_NEWNET)
 	if err != nil {
 		return err
@@ -138,7 +144,7 @@ func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange,
 		}
 
 		uniqConn.Direction = checkConnectDirection(int(conn.InetDiagMsg.ID.SourcePort), portRanges.MinPort, portRanges.MaxPort)
-		uniqConn.SrcIP = conn.InetDiagMsg.ID.Source.String()
+		uniqConn.SrcIP = localIP
 		uniqConn.DstIP = conn.InetDiagMsg.ID.Destination.String()
 		(*connections)[uniqConn]++
 	}
