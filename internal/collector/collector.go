@@ -88,6 +88,11 @@ func (c *Collector) GetConnections() (map[UniqTupleConnection]float64, error) {
 			continue
 		}
 
+		err = ns.Close()
+		if err != nil {
+			continue
+		}
+
 		// If ConnectFromAllNs == false (config) get connections only from root namespace (PID 1)
 		if process.PID == 1 && !c.cfg.ConnectFromAllNs {
 			break
