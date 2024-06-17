@@ -98,36 +98,3 @@ func Test_shouldMatchBySubnets(t *testing.T) {
 		})
 	}
 }
-
-// func Test_selectNetworkNamespaceInode(t *testing.T) {
-// 	tests := []struct {
-// 		name       string
-// 		namespaces procfs.Namespaces
-// 		want       uint32
-// 	}{
-// 		{
-// 			name: "success",
-// 			namespaces: procfs.Namespaces{
-// 				"mnt": {Type: "mnt", Inode: 4026531840},
-// 				"net": {Type: "net", Inode: 4026531991},
-// 			},
-// 			want: 4026531991,
-// 		},
-// 		{
-// 			name: "error",
-// 			namespaces: procfs.Namespaces{
-// 				"mnt": {Type: "mnt", Inode: 4026531840},
-// 				"ipc": {Type: "ipc", Inode: 4026531993},
-// 			},
-// 			want: 0,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			got := selectNetworkNamespaceInode(tt.namespaces)
-// 			if got != tt.want {
-// 				t.Errorf("Expected '%v', got '%v'", tt.want, got)
-// 			}
-// 		})
-// 	}
-// }

@@ -16,19 +16,20 @@ func main() {
 	metricsEndpoint := kingpin.Flag("endpoint", "Path under which to expose metrics.").Default("/metrics").String()
 	excludeSubnets := kingpin.Flag("exclude", "Comma separated list of pattern subnets to skip them during connection parsing, example: --exclude=127.0,192.168").Default("none").String()
 	connectFromAllNs := kingpin.Flag("all", "Scrape connections from all network namespaces").Default("false").Bool()
+	allowPublicIP := kingpin.Flag("allow-public", "Allow tracking of public IP addresses").Default("false").Bool()
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
 	log.Printf("ngraph is starting on %s", *listeningAddress)
 
-	registerer := prometheus.DefaultRegisterer
-	gatherer := prometheus.DefaultGatherer
-
-	collCfg := collector.NewConfig(*excludeSubnets, *connectFromAllNs)
-	coll := collector.NewCollector(*collCfg)
+	collectorCfg := collector.NewConfig(*excludeSubnets, *connectFromAllNs, *allowPublicIP)
+	collector := collector.NewCollector(*collectorCfg)
 
 	exporterCfg := exporter.NewConfig(*listeningAddress, *metricsEndpoint)
-	exporter := exporter.NewExporter(*exporterCfg, coll)
+	exporter := exporter.NewExporter(*exporterCfg, collector)
+
+	registerer := prometheus.DefaultRegisterer
+	gatherer := prometheus.DefaultGatherer
 
 	registerer.MustRegister(exporter)
 	http.Handle(*metricsEndpoint, promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}))

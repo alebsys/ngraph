@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"fmt"
+	"net"
 	"strings"
 	"syscall"
 
@@ -9,6 +11,16 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
+
+// Define private IP ranges as a package-level variable
+var privateIPRanges = []string{
+	"127.0.0.0/8",
+	"10.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	"100.64.0.0/10",  // Carrier-grade NAT
+	"169.254.0.0/16", // Link-local addresses
+}
 
 const (
 	IpLocalPortRangeFile = "/proc/sys/net/ipv4/ip_local_port_range"
@@ -21,6 +33,7 @@ type Collector struct {
 type Config struct {
 	ConnectFromAllNs bool
 	ExcludeSubnets   []string
+	AllowPublicIP    bool
 }
 
 type UniqTupleConnection struct {
@@ -37,7 +50,7 @@ func NewCollector(c Config) *Collector {
 }
 
 // NewConfig creates a new Config instance for Collector with the given fields.
-func NewConfig(exclude string, allNS bool) *Config {
+func NewConfig(exclude string, allNS, allowPub bool) *Config {
 	excludeSubnets := strings.Split(exclude, ",")
 
 	if len(excludeSubnets) == 1 && excludeSubnets[0] == "" {
@@ -46,6 +59,7 @@ func NewConfig(exclude string, allNS bool) *Config {
 	return &Config{
 		ConnectFromAllNs: allNS,
 		ExcludeSubnets:   excludeSubnets,
+		AllowPublicIP:    allowPub,
 	}
 }
 
@@ -130,13 +144,54 @@ func (c *Collector) getEstabConnectionsFromNetNs(portRanges lnet.LocalPortRange,
 		if shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.InetDiagMsg.ID.Source.String()) || shouldMatchBySubnets(c.cfg.ExcludeSubnets, conn.InetDiagMsg.ID.Destination.String()) {
 			continue
 		}
+		peerIP := conn.InetDiagMsg.ID.Destination.String()
 
 		uniqConn.Direction = checkConnectDirection(int(conn.InetDiagMsg.ID.SourcePort), portRanges.MinPort, portRanges.MaxPort)
 		uniqConn.SrcIP = localIP
-		uniqConn.DstIP = conn.InetDiagMsg.ID.Destination.String()
+		uniqConn.DstIP, err = determineDstIP(peerIP, c.cfg.AllowPublicIP)
+		if err != nil {
+			return err
+		}
 		(*connections)[uniqConn]++
 	}
 	return nil
+}
+
+// determineDstIP returns the peer IP if public IPs are allowed or if the peer IP is private; otherwise, it returns "external_ip".
+func determineDstIP(peerIP string, allowPublicIP bool) (string, error) {
+	if allowPublicIP {
+		return peerIP, nil
+	}
+
+	isPrivate, err := isPrivateIP(peerIP)
+	if err != nil {
+		return "", err
+	}
+
+	if isPrivate {
+		return peerIP, nil
+	}
+	return "external_ip", nil
+}
+
+// isPrivateIP checks if the given IP address is from a private range.
+func isPrivateIP(ipStr string) (bool, error) {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false, fmt.Errorf("invalid IP address: %s", ipStr)
+	}
+
+	for _, cidr := range privateIPRanges {
+		_, subnet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return false, err
+		}
+		if subnet.Contains(ip) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func shouldMatchBySubnets(subnets []string, addr string) bool {

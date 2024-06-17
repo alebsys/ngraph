@@ -13,7 +13,7 @@ test:
 .PHONY: build
 build:
 	@mkdir -p bin
-	env GOOS=linux GOARCH=amd64 go build -o bin/$(PROJECTNAME) cmd/ngraph/main.go
+	env GOOS=linux GOARCH=amd64 go build -o bin/$(PROJECTNAME) ngraph.go
 
 ## clean: Cleanup binary.
 clean:
